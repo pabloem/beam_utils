@@ -3,7 +3,7 @@ import apache_beam as beam
 import csv
 
 
-class CsvFileSource(beam.io.textio._TextSource):
+class CsvFileSource(beam.io.filebasedsource.FileBasedSource):
   """ A source for a GCS or local comma-separated-file
 
   Parses a text file assuming newline-delimited lines,
@@ -29,6 +29,8 @@ class CsvFileSource(beam.io.textio._TextSource):
     self.delimiter = kwargs.pop('delimiter',',')
     self.header = kwargs.pop('header',True)
     self.dictionary_output = kwargs.pop('dictionary_output', True)
+    # Can't just split anywhere
+    kwargs['splittable'] = False
     super(self.__class__, self).__init__(*args, **kwargs)
 
     if not self.header and dictionary_output:
@@ -38,20 +40,18 @@ class CsvFileSource(beam.io.textio._TextSource):
   def read_records(self, file_name, range_tracker):
     # If a multi-file pattern was specified as a source then make sure the
     # start/end offsets use the default values for reading the entire file.
-    self._new_file = True
     headers = None
-    recs = super(CsvFileSource, self).read_records(file_name, range_tracker)
+    self._file = self.open_file(file_name)
 
-    for rec in recs:
-      if len(rec) == 0: continue
-      if self._new_file and self.dictionary_output:
-        headers = csv.reader([rec], delimiter=self.delimiter).next()
-        self._new_file = False
+    reader = csv.reader(self._file)
+
+    for i, rec in enumerate(reader):
+      if (self.header or self.dictionary_output) and i == 0:
+        headers = rec
         continue
-      self._new_file = False
 
-      if not self.dictionary_output:
-        res = csv.reader([rec], delimiter=self.delimiter).next()
+      if self.dictionary_output:
+        res = {header:val for header, val in zip(headers,rec)}
       else:
-        res = csv.DictReader([rec], delimiter=self.delimiter, fieldnames=headers).next()
+        res = rec
       yield res
