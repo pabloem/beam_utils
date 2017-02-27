@@ -1,7 +1,7 @@
 # Implements a few sources for
 
 import csv
-from json import JSONDecoder
+import json
 from functools import partial
 
 import apache_beam as beam
@@ -13,12 +13,9 @@ __all__ = ['JsonLinesFileSource', 'CsvFileSource']
 
 class JsonLinesFileSource(beam.io.filebasedsource.FileBasedSource):
 
-  DEFAULT_READ_BUFFER_SIZE = 8192
-
   def __init__(self, file_pattern,
                compression_type=fileio.CompressionTypes.AUTO,
-               coder=coders.StrUtf8Coder(),
-               validate=True, buffer_size=DEFAULT_READ_BUFFER_SIZE):
+               coder=coders.StrUtf8Coder(), validate=True):
     """ Initialize a JsonLinesFileSource.
     """
 
@@ -26,32 +23,18 @@ class JsonLinesFileSource(beam.io.filebasedsource.FileBasedSource):
                                          compression_type=compression_type,
                                          validate=validate,
                                          splittable=False)
-
     self._coder = coder
-    self._buffer_size = buffer_size
 
   def read_records(self, file_name, range_tracker):
     self._file = self.open_file(file_name)
-
     for rec in self._json_parse(self._file):
       yield rec
 
-  # Routine from:
-  # stackoverflow/questions/21708192/how-do-i-use-the-json-module-to-read-in-one-json-object-at-a-time/
-  def _json_parse(self, fileobj, decoder=JSONDecoder()):
-    buffer = None
-    for chunk in iter(partial(fileobj.read, self._buffer_size), ''):
-      chunk = self._coder.decode(chunk)
-      buffer = buffer + chunk if buffer else chunk
-      while buffer:
-        try:
-          buffer = buffer.lstrip()  # Stripping new lines
-          result, index = decoder.raw_decode(buffer)
-          buffer = buffer[index:]
-          yield result
-        except ValueError:
-          # Not enough data to decode, read more
-          break
+  def _json_parse(self, fileobj):
+    for line in fileobj:
+      line = self._coder.decode(line)
+      result = json.loads(line)
+      yield result
 
 
 class CsvFileSource(beam.io.filebasedsource.FileBasedSource):
