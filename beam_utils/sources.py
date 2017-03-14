@@ -65,10 +65,10 @@ class CsvFileSource(beam.io.filebasedsource.FileBasedSource):
     self.header = header
     self.dictionary_output = dictionary_output
     # Can't just split anywhere
-    kwargs['splittable'] = False
     super(self.__class__, self).__init__(file_pattern,
                                          compression_type=compression_type,
-                                         validate=validate)
+                                         validate=validate,
+                                         splittable=False)
 
     if not self.header and dictionary_output:
       raise ValueError(
