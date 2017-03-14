@@ -44,30 +44,35 @@ class CsvFileSource(beam.io.filebasedsource.FileBasedSource):
   and comma-delimited fields. Assumes UTF-8 encoding.
   """
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, file_pattern,
+               compression_type=fileio.CompressionTypes.AUTO,
+               delimiter=',', header=True, dictionary_output=True,
+               validate=True):
     """ Initialize a CSVFileSource.
 
     Args:
       delimiter: The delimiter character in the CSV file.
       header: Whether the input file has a header or not.
         Default: True
-      dictionary_output: The kind of records that the CsvFileSource should output.
+      dictionary_output: The kind of records that the CsvFileSource outputs.
         If True, then it will output dict()'s, if False it will output list()'s.
         Default: True
 
     Raises:
       ValueError: If the input arguments are not consistent.
     """
-    self.delimiter = kwargs.pop('delimiter',',')
-    self.header = kwargs.pop('header',True)
-    self.dictionary_output = kwargs.pop('dictionary_output', True)
+    self.delimiter = delimiter
+    self.header = header
+    self.dictionary_output = dictionary_output
     # Can't just split anywhere
     kwargs['splittable'] = False
-    super(self.__class__, self).__init__(*args, **kwargs)
+    super(self.__class__, self).__init__(file_pattern,
+                                         compression_type=compression_type,
+                                         validate=validate)
 
     if not self.header and dictionary_output:
       raise ValueError(
-          'a header is required for the CSV reader to provide dictionary output')
+          'header is required for the CSV reader to provide dictionary output')
 
   def read_records(self, file_name, range_tracker):
     # If a multi-file pattern was specified as a source then make sure the
@@ -75,7 +80,7 @@ class CsvFileSource(beam.io.filebasedsource.FileBasedSource):
     headers = None
     self._file = self.open_file(file_name)
 
-    reader = csv.reader(self._file)
+    reader = csv.reader(self._file, delimiter=self.delimiter)
 
     for i, rec in enumerate(reader):
       if (self.header or self.dictionary_output) and i == 0:
