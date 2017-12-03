@@ -6,7 +6,7 @@ from functools import partial
 
 import apache_beam as beam
 from apache_beam import coders
-from apache_beam.io import fileio
+from apache_beam.io import filesystem
 
 __all__ = ['JsonLinesFileSource', 'CsvFileSource']
 
@@ -14,7 +14,7 @@ __all__ = ['JsonLinesFileSource', 'CsvFileSource']
 class JsonLinesFileSource(beam.io.filebasedsource.FileBasedSource):
 
   def __init__(self, file_pattern,
-               compression_type=fileio.CompressionTypes.AUTO,
+               compression_type=filesystem.CompressionTypes.AUTO,
                coder=coders.StrUtf8Coder(), validate=True):
     """ Initialize a JsonLinesFileSource.
     """
@@ -45,7 +45,7 @@ class CsvFileSource(beam.io.filebasedsource.FileBasedSource):
   """
 
   def __init__(self, file_pattern,
-               compression_type=fileio.CompressionTypes.AUTO,
+               compression_type=filesystem.CompressionTypes.AUTO,
                delimiter=',', header=True, dictionary_output=True,
                validate=True):
     """ Initialize a CSVFileSource.
