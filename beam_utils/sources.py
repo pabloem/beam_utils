@@ -80,7 +80,7 @@ class CsvFileSource(beam.io.filebasedsource.FileBasedSource):
     headers = None
     self._file = self.open_file(file_name)
 
-    reader = csv.reader(self._file, delimiter=self.delimiter)
+    reader = csv.reader(_Fileobj2Iterator(self._file), delimiter=self.delimiter)
 
     for i, rec in enumerate(reader):
       if (self.header or self.dictionary_output) and i == 0:
@@ -92,3 +92,18 @@ class CsvFileSource(beam.io.filebasedsource.FileBasedSource):
       else:
         res = rec
       yield res
+
+
+class _Fileobj2Iterator(object):
+
+    def __init__(self, obj):
+        self._obj = obj
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        line = self._obj.readline()
+        if line == None or line == '':
+            raise StopIteration
+        return line
